@@ -117,8 +117,9 @@ public class CameraManager {
      */
     private ZoomHelper mZoomHelper;
 
+
     /**
-     * 初始化方法 默认打开后置摄像头
+     * 初始化方法 默认打开后置摄像头,最后必须调用
      *
      * @throws CameraError
      */
@@ -856,6 +857,11 @@ public class CameraManager {
         return mirror;
     }
 
+    /**
+     * 自拍镜像 默认true
+     * @param mirror
+     * @return
+     */
     public CameraManager setMirror(boolean mirror) {
         this.mirror = mirror;
         return this;

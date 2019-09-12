@@ -1,4 +1,4 @@
 include ':app', ':zcamera'
 
-include ':android-common'
-project(':android-common').projectDir=new File("../../modules/AndroidCommon/android-common")
+/*include ':android-common'
+project(':android-common').projectDir=new File("../../modules/AndroidCommon/android-common")*/
