@@ -86,6 +86,7 @@ public class CameraManager {
      * 手机逆时针旋转的角度 默认竖屏0度
      */
     private int mPhoneRotation=0;
+    private int preRotation=0;
 
     /**
      * 正在拍照
@@ -530,7 +531,6 @@ public class CameraManager {
     private void setPreRotation(int rotation){
         Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
         Camera.getCameraInfo(mCameraId, cameraInfo);
-        int preRotation=0;
         if (mCameraFacing == Camera.CameraInfo.CAMERA_FACING_BACK) {
             preRotation = (cameraInfo.orientation - rotation + 360) % 360;
         } else {
@@ -579,11 +579,11 @@ public class CameraManager {
         }
         parameters.setRotation(picRotation);
         mCamera.setParameters(parameters);
-        Log.d(TAG, "setPicRotation:phoneRotation=" + phoneRotation);
-        Log.d(TAG, "setPicRotation 设置图片方向:picRotation=" + picRotation);
+//        Log.d(TAG, "setPicRotation:phoneRotation=" + phoneRotation);
+//        Log.d(TAG, "setPicRotation 设置图片方向:picRotation=" + picRotation);
     }
 
-
+    private Camera.Size preSize;
     /**
      * //配置相机参数
      *
@@ -600,7 +600,7 @@ public class CameraManager {
             parameters.setPreviewFormat(ImageFormat.NV21);
         }
 
-        Camera.Size preSize = CameraUtil.getBestSize(preWidth, preHeight, parameters.getSupportedPreviewSizes(), exChangeWH);
+        preSize = CameraUtil.getBestSize(preWidth, preHeight, parameters.getSupportedPreviewSizes(), exChangeWH);
         Log.d(TAG, "initParameters:preSize=[" + preSize.width + "," + preSize.height + "]");
         parameters.setPreviewSize(preSize.width, preSize.height);
 
@@ -611,7 +611,7 @@ public class CameraManager {
         parameters.setPictureSize(picSize.width, picSize.height);
 
         //预览方向
-        setPreRotation( getWindowRotation());
+        setPreRotation(getWindowRotation());
         //拍照方向
         setPicRotation(mPhoneRotation);
 
@@ -865,5 +865,13 @@ public class CameraManager {
     public CameraManager setMirror(boolean mirror) {
         this.mirror = mirror;
         return this;
+    }
+
+    public Camera.Size getPreSize() {
+        return preSize;
+    }
+
+    public int getPreRotation() {
+        return preRotation;
     }
 }

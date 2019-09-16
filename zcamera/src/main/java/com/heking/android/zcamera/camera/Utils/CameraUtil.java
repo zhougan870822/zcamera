@@ -1,8 +1,14 @@
 package com.heking.android.zcamera.camera.Utils;
 
+import android.content.Context;
 import android.hardware.Camera;
+import android.hardware.Camera.Parameters;
 import android.util.Log;
+import android.view.OrientationEventListener;
+import android.view.Surface;
+import android.view.WindowManager;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,7 +29,7 @@ public class CameraUtil {
      * @return
      */
     public static Camera.Size getBestSize(int requestWidth, int requestHeight, List<Camera.Size> sizeList, boolean exchangeWH) {
-        Log.d(TAG, "getBestSize:requestWidth="+requestWidth+",requestHeight="+requestHeight);
+        Log.d(TAG, "getBestSize:requestWidth=" + requestWidth + ",requestHeight=" + requestHeight);
         //互换宽高
         if (exchangeWH) {
             int temp = requestWidth;
@@ -36,7 +42,7 @@ public class CameraUtil {
         Camera.Size bestSize = null;
         //目标宽高比
         double targetRatio = (double) requestWidth / (double) requestHeight;
-        Log.d(TAG, "getBestSize:targetRatio="+targetRatio);
+        Log.d(TAG, "getBestSize:targetRatio=" + targetRatio);
         double ratio = 0;
         int tempArea = 0;
         double tempRatio = 0;
@@ -81,7 +87,7 @@ public class CameraUtil {
             return bestSize;
         }
 
-        Log.d(TAG, "getBestSize:cacheSize.size="+cacheSize.size());
+        Log.d(TAG, "getBestSize:cacheSize.size=" + cacheSize.size());
         //遍历找出面积最接近的尺寸
         minArea = Integer.MAX_VALUE;
         for (Camera.Size size : cacheSize) {
@@ -92,7 +98,7 @@ public class CameraUtil {
                 minArea = tempArea;
             }
         }
-        Log.d(TAG, "getBestSize:bestSize="+bestSize);
+        Log.d(TAG, "getBestSize:bestSize=" + bestSize);
         return bestSize;
     }
 
@@ -113,4 +119,183 @@ public class CameraUtil {
         }
         return -1;
     }
+
+
+    /**
+     * 是否支持给定的预览编码格式
+     *
+     * @param parameters
+     * @param previewFormat
+     * @return
+     */
+    public static boolean supportPreviewFormat(Parameters parameters, int previewFormat) {
+        if (parameters != null) {
+            List<Integer> formats = parameters.getSupportedPreviewFormats();
+            if (formats != null && formats.size() > 0) {
+                for (Integer format : formats) {
+                    if (format == previewFormat) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 获取窗口旋转角度(逆时针),和手机旋转角度无关
+     *
+     * @return
+     */
+    public static int getWindowRotation(Context context) {
+        WindowManager windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+        int rotation = windowManager.getDefaultDisplay().getRotation();
+        //手机旋转的角度
+        int windowRotation = 0;
+        switch (rotation) {
+            case Surface.ROTATION_0://竖屏
+                windowRotation = 0;
+                break;
+            case Surface.ROTATION_90://逆时针旋转90度(左横屏)
+                windowRotation = 90;
+                break;
+            case Surface.ROTATION_180://逆时针旋转180度(倒竖屏)
+                windowRotation = 180;
+                break;
+            case Surface.ROTATION_270://逆时针旋转270度(右横屏)
+                windowRotation = 270;
+                break;
+        }
+        return windowRotation;
+    }
+
+    /**
+     * 获取预览方向{@link Camera#setDisplayOrientation(int)}
+     *
+     * @param context
+     * @param cameraInfo
+     * @param cameraFacing
+     * @return
+     */
+    public static int getPreOrientation(Context context, Camera.CameraInfo cameraInfo, int cameraFacing) {
+        int preRotation;
+        int windowRotation = getWindowRotation(context);
+        if (cameraFacing == Camera.CameraInfo.CAMERA_FACING_BACK) {
+            preRotation = (cameraInfo.orientation - windowRotation + 360) % 360;
+        } else {
+            preRotation = (cameraInfo.orientation + windowRotation) % 360;
+            preRotation = (360 - preRotation) % 360;
+        }
+     /*  switch (rotation){
+           case 0:
+               preRotation=90;
+               break;
+           case 90:
+               preRotation=0;
+               break;
+           case 180:
+               preRotation=270;
+               break;
+           case 270:
+               preRotation=180;
+               break;
+       }*/
+
+        return preRotation;
+
+    }
+
+    /**
+     * 获取保存的图片的方向{@link Camera.Parameters#setRotation(int)}
+     *
+     * @param phoneRotation 手机旋转的角度可以用{@link OrientationEventListener }
+     *                      或{@link com.heking.android.zcamera.content.SimpleRotationListener}监听
+     */
+    public static int getPicRotation(Camera.CameraInfo cameraInfo, int cameraFacing, int phoneRotation) {
+        int picRotation = 0;
+        if (cameraFacing == Camera.CameraInfo.CAMERA_FACING_BACK) {
+            picRotation = (cameraInfo.orientation + phoneRotation) % 360;
+        } else {
+            picRotation = (cameraInfo.orientation - phoneRotation + 360) % 360;
+
+        }
+
+        return picRotation;
+    }
+
+    /**
+     * 是否支持对焦模式
+     *
+     * @param focusMode
+     * @return
+     */
+    public static boolean supportFocus(Parameters parameters,String focusMode) {
+        if(parameters==null){
+            return false;
+        }
+        List<String> supportedFocusModes = parameters.getSupportedFocusModes();
+        if(supportedFocusModes==null || supportedFocusModes.size()==0){
+            return false;
+        }
+        return supportedFocusModes.contains(focusMode);
+    }
+
+    /**
+     * 是否支持指定的闪光灯模式
+     * @param flashMode
+     * @return
+     */
+    public static boolean supportFlashMode(Parameters parameters,String flashMode){
+        if(parameters!=null){
+            List<String> supportedFlashModes = parameters.getSupportedFlashModes();
+            if(supportedFlashModes==null){
+                return false;
+            }
+            return supportedFlashModes.contains(flashMode);
+        }
+        return false;
+    }
+
+
+    /**
+     * 开始预览
+     */
+    public static void startPreview(Camera camera) {
+        if (camera != null) {
+            camera.startPreview();
+            Log.d(TAG, "startPreview:开始预览");
+        }
+    }
+
+    /**
+     * 停止预览
+     */
+    public static void stopPreview(Camera camera) {
+        if (camera != null) {
+            camera.stopPreview();
+            Log.d(TAG, "stopPreview:停止预览");
+        }
+    }
+
+    /**
+     * 释放相机
+     */
+    public void releaseCamera(Camera camera) {
+        if (camera != null) {
+            try {
+                camera.stopPreview();
+                camera.setPreviewCallback(null);
+                camera.setPreviewDisplay(null);
+                camera.release();
+                camera = null;
+                Log.d(TAG, "releaseCamera:释放相机");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }
+    }
+
+
+
 }

@@ -6,12 +6,6 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <ImageView
-        android:id="@+id/iv_pic"
-        android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:scaleType="centerCrop"
-        />
     <Button
         android:id="@+id/btn1"
         android:layout_width="match_parent"
@@ -20,11 +14,43 @@
         android:text="拍照"
         android:textColor="@color/red"
         />
+    <Button
+        android:id="@+id/btn2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/zcamera_bg_5555"
+        android:text="前后"
+        android:textColor="@color/red"
+        android:layout_below="@id/btn1"
+        android:layout_marginTop="2dp"
+        />
+    <Button
+        android:id="@+id/btn3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/zcamera_bg_5555"
+        android:text="录像"
+        android:textColor="@color/red"
+        android:layout_below="@id/btn2"
+        android:layout_marginTop="2dp"
+
+        />
+
+    <ImageView
+        android:id="@+id/iv_pic"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scaleType="centerCrop"
+        android:layout_below="@id/btn3"
+
+        />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_below="@id/iv_pic"
         android:orientation="vertical"
+        android:visibility="visible"
         >
         <SurfaceView
             android:id="@+id/surfaceView1"

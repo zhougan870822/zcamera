@@ -17,6 +17,7 @@ import android.widget.Toast;
 import com.heking.android.zcamera.camera.CameraManager;
 import com.heking.android.zcamera.camera.ui.CaptureImageActivity;
 import com.heking.android.zcamera.exceptions.CameraError;
+import com.zhoug.android.common.utils.AppUtils;
 
 import java.io.File;
 import java.util.Timer;
@@ -47,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
         imageView = findViewById(R.id.iv_pic);
         surfaceView1 = findViewById(R.id.surfaceView1);
         surfaceView2 = findViewById(R.id.surfaceView2);
-
+        surfaceView2.setVisibility(View.GONE);
         addListener();
 
         initCamera();
@@ -68,10 +69,21 @@ public class MainActivity extends AppCompatActivity {
 
         });
 
+        findViewById(R.id.btn2).setOnClickListener(v->{
+            Intent intent=new Intent(this,BackFrontActivity.class);
+            startActivity(intent);
+
+        });
+
+
+        findViewById(R.id.btn3).setOnClickListener(v->{
+            Intent intent=new Intent(this,VideoActivity.class);
+            startActivity(intent);
+
+        });
     }
 
     private void initCamera() {
-
         cameraManager1 = new CameraManager();
         cameraManager1.setSurfaceView(surfaceView1);
         cameraManager1.setPreviewFormat(ImageFormat.JPEG);
@@ -81,19 +93,21 @@ public class MainActivity extends AppCompatActivity {
         } catch (CameraError cameraError) {
             cameraError.printStackTrace();
         }
-
         Log.d(TAG, "run:打开第二个相机");
-         Toast.makeText(this, "打开第二个相机", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "打开第二个相机", Toast.LENGTH_SHORT).show();
         cameraManager2 = new CameraManager();
         cameraManager2.setSurfaceView(surfaceView2);
         cameraManager2.setPreviewFormat(ImageFormat.JPEG);
         cameraManager2.setCameraFacing(Camera.CameraInfo.CAMERA_FACING_FRONT);
         try {
             cameraManager2.init();
+            surfaceView2.setVisibility(View.VISIBLE);
         } catch (Exception cameraError) {
             cameraError.printStackTrace();
             Toast.makeText(this, "打开相机失败:"+cameraError.getMessage(), Toast.LENGTH_SHORT).show();
         }
+
+
 
 
     }

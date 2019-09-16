@@ -4,7 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.hardware.Camera;
 
-public class SpUtil {
+public  class SpUtil {
     private static final String DEF="def_sp";
 
     public static void keepFlashMode(Context context, String flashMode){
