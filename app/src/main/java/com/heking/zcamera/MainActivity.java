@@ -16,6 +16,7 @@ import android.widget.Toast;
 
 import com.heking.android.zcamera.camera.CameraManager;
 import com.heking.android.zcamera.camera.ui.CaptureImageActivity;
+import com.heking.android.zcamera.camera.ui.CaptureVideoActivity;
 import com.heking.android.zcamera.exceptions.CameraError;
 import com.zhoug.android.common.utils.AppUtils;
 
@@ -77,7 +78,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         findViewById(R.id.btn3).setOnClickListener(v->{
-            Intent intent=new Intent(this,VideoActivity.class);
+            Intent intent=new Intent(this,CaptureVideoActivity.class);
             startActivity(intent);
 
         });

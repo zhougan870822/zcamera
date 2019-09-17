@@ -55,14 +55,14 @@ public class CameraUtil {
 //            Log.d(TAG, "size:[" + size.width + "," + size.height + "]");
             //宽高相等,直接返回
             if (size.width == requestWidth && size.height == requestHeight) {
-                Log.d(TAG, "找到相同的尺寸size:[" + size.width + "," + size.height + "]");
+//                Log.d(TAG, "找到相同的尺寸size:[" + size.width + "," + size.height + "]");
                 return size;
             }
             ratio = (double) size.width / (double) size.height;
 
             //宽高比相等,找出面积最接近的Size
             if (ratio == targetRatio) {
-                Log.d(TAG, "宽高比相等:bestSize:[" + size.width + "," + size.height + "]");
+//                Log.d(TAG, "宽高比相等:bestSize:[" + size.width + "," + size.height + "]");
                 tempArea = Math.abs(size.width * size.height - requestWidth * requestHeight);
                 if (tempArea < minArea) {
                     bestSize = size;
@@ -91,14 +91,18 @@ public class CameraUtil {
         //遍历找出面积最接近的尺寸
         minArea = Integer.MAX_VALUE;
         for (Camera.Size size : cacheSize) {
-            Log.d(TAG, "宽高比不相等:bestSize:[" + size.width + "," + size.height + "]");
+//            Log.d(TAG, "宽高比不相等:bestSize:[" + size.width + "," + size.height + "]");
             tempArea = Math.abs(size.width * size.height - requestHeight * requestWidth);
             if (tempArea < minArea) {
                 bestSize = size;
                 minArea = tempArea;
             }
         }
-        Log.d(TAG, "getBestSize:bestSize=" + bestSize);
+        if(bestSize!=null){
+            Log.d(TAG, "getBestSize:bestSize=[" +bestSize.width+","+bestSize.height+"]" );
+        }else{
+            Log.e(TAG, "bestSize==null");
+        }
         return bestSize;
     }
 
@@ -125,7 +129,7 @@ public class CameraUtil {
      * 是否支持给定的预览编码格式
      *
      * @param parameters
-     * @param previewFormat
+     * @param previewFormat eg:{@link android.graphics.ImageFormat#NV16}
      * @return
      */
     public static boolean supportPreviewFormat(Parameters parameters, int previewFormat) {
@@ -226,7 +230,8 @@ public class CameraUtil {
     /**
      * 是否支持对焦模式
      *
-     * @param focusMode
+     * @param parameters Parameters
+     * @param focusMode eg:{@link  Parameters#FOCUS_MODE_AUTO}
      * @return
      */
     public static boolean supportFocus(Parameters parameters,String focusMode) {
@@ -242,7 +247,7 @@ public class CameraUtil {
 
     /**
      * 是否支持指定的闪光灯模式
-     * @param flashMode
+     * @param flashMode eg:{@link Parameters#FLASH_MODE_AUTO}
      * @return
      */
     public static boolean supportFlashMode(Parameters parameters,String flashMode){
@@ -280,7 +285,7 @@ public class CameraUtil {
     /**
      * 释放相机
      */
-    public void releaseCamera(Camera camera) {
+    public static void releaseCamera(Camera camera) {
         if (camera != null) {
             try {
                 camera.stopPreview();
