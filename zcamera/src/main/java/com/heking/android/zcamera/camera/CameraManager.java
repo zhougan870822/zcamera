@@ -19,15 +19,12 @@ import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.WindowManager;
-import android.view.animation.TranslateAnimation;
 
+import com.heking.android.zcamera.CameraEventCallback;
 import com.heking.android.zcamera.camera.Utils.CameraUtil;
 import com.heking.android.zcamera.camera.Utils.ZoomHelper;
-import com.heking.android.zcamera.exceptions.CameraError;
-import com.heking.android.zcamera.exceptions.ErrorInfo;
 
 import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -62,12 +59,12 @@ public class CameraManager {
     /**
      * 拍照后是否可以继续预览(连拍)
      */
-    private boolean continuePreView=false;
+    private boolean continuePreView = false;
 
     /**
      * 自拍镜像
      */
-    private boolean mirror=true;
+    private boolean mirror = true;
 
     //需要的尺寸,可能会被改变,当和预览尺寸的比例不一样时
     //请把预览和保存图片的宽高比设置一样
@@ -77,21 +74,23 @@ public class CameraManager {
     private int preWidth = 1080;
     private int preHeight = 1920;
 
+    private CameraEventCallback cameraEventCallback;
+
     /**
      * 闪光灯模式
      */
-    private String mFlashModel=Camera.Parameters.FLASH_MODE_OFF;
+    private String mFlashModel = Camera.Parameters.FLASH_MODE_OFF;
 
     /**
      * 手机逆时针旋转的角度 默认竖屏0度
      */
-    private int mPhoneRotation=0;
-    private int preRotation=0;
+    private int mPhoneRotation = 0;
+    private int preRotation = 0;
 
     /**
      * 正在拍照
      */
-    private boolean capturing=false;
+    private boolean capturing = false;
 
     /**
      * 预览视图
@@ -104,7 +103,7 @@ public class CameraManager {
     /**
      * 预览视图的编码
      */
-    private int mPreviewFormat=ImageFormat.NV21;
+    private int mPreviewFormat = ImageFormat.NV21;
 
     private SurfaceHolder mHolder;
 
@@ -121,10 +120,8 @@ public class CameraManager {
 
     /**
      * 初始化方法 默认打开后置摄像头,最后必须调用
-     *
-     * @throws CameraError
      */
-    public void init() throws CameraError {
+    public void init() {
         if (mSurfaceView == null) {
             throw new NullPointerException("SurfaceView ==null");
         }
@@ -146,16 +143,14 @@ public class CameraManager {
                 //需求和显示的宽高比不一致
                 computeSize(width, height);
                 if (mCamera == null) {
-                    try {
-                        Log.d(TAG, "surfaceChanged:mCameraFacing="+mCameraFacing);
-                        openCamera(mCameraFacing);
-                    } catch (CameraError cameraError) {
-                        cameraError.printStackTrace();
-                    }
+
+                    Log.d(TAG, "surfaceChanged:mCameraFacing=" + mCameraFacing);
+                    openCamera(mCameraFacing);
+
                 } else {
                     stopPreview();
                 }
-               startPreview(); //开始预览
+                startPreview(); //开始预览
             }
 
             @Override
@@ -176,8 +171,8 @@ public class CameraManager {
     private void computeSize(int width, int height) {
         if ((double) preWidth / preHeight != (double) width / height) {
             //分别计算出宽高的倍数
-            double preRatioW = (double)preWidth / width;
-            double preRatioH = (double)preHeight / height;
+            double preRatioW = (double) preWidth / width;
+            double preRatioH = (double) preHeight / height;
             double preRadio = preRatioW > preRatioH ? preRatioW : preRatioH;
             preWidth = (int) (width * preRadio);
             preHeight = (int) (height * preRadio);
@@ -196,13 +191,20 @@ public class CameraManager {
 
     /**
      * 打开相机
+     *
      * @param cameraFacing {@link Camera.CameraInfo#CAMERA_FACING_BACK,Camera.CameraInfo#CAMERA_FACING_BACK}
-     * @throws CameraError
      */
-    private void openCamera(int cameraFacing) throws CameraError {
+    private void openCamera(int cameraFacing) {
         mCameraId = CameraUtil.getCameraIdByFacing(cameraFacing);
         if (mCameraId != -1) {
-            mCamera = Camera.open(mCameraId);
+            try {
+                mCamera = Camera.open(mCameraId);
+            } catch (Exception e) {
+                e.printStackTrace();
+                if (cameraEventCallback != null) {
+                    cameraEventCallback.onOpenCameraError(CameraEventCallback.ERROR_CAMERA_OPEN_FAIL, "打开相机失败:mCameraId=" + mCameraId);
+                }
+            }
             //预览回掉
             if (previewCallback != null) {
                 mCamera.setPreviewCallback(previewCallback);
@@ -217,7 +219,9 @@ public class CameraManager {
             }
 
         } else {
-            throw CameraError.build(ErrorInfo.ERROR_NO_CAMERA);
+            if (cameraEventCallback != null) {
+                cameraEventCallback.onOpenCameraError(CameraEventCallback.ERROR_CAMERA_NO_FOUND, "找不到相机:cameraFacing=" + cameraFacing);
+            }
         }
     }
 
@@ -255,8 +259,8 @@ public class CameraManager {
                 mCamera.setPreviewDisplay(null);
                 mCamera.release();
                 mCamera = null;
-                mParameters=null;
-                if(mZoomHelper!=null){
+                mParameters = null;
+                if (mZoomHelper != null) {
                     mZoomHelper.release();
                 }
 
@@ -282,11 +286,11 @@ public class CameraManager {
      * @param path
      */
     public void captureImage(String path) {
-        if(capturing){
+        if (capturing) {
             Log.e(TAG, "正在拍照请稍后...");
             return;
         }
-        capturing=true;
+        capturing = true;
         if (TextUtils.isEmpty(path)) {
             path = cacheImageKeepPath();
         }
@@ -299,20 +303,20 @@ public class CameraManager {
             mCamera.takePicture(null, null, null, new Camera.PictureCallback() {
                 @Override
                 public void onPictureTaken(byte[] data, Camera camera) {
-                    Log.d(TAG, "onPictureTaken:data.length="+data.length);
-                    if(mCameraFacing==Camera.CameraInfo.CAMERA_FACING_FRONT && mirror){
+                    Log.d(TAG, "onPictureTaken:data.length=" + data.length);
+                    if (mCameraFacing == Camera.CameraInfo.CAMERA_FACING_FRONT && mirror) {
                         Log.d(TAG, "onPictureTaken:自拍镜像");
                         Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-                        Log.d(TAG, "onPictureTaken:bitmap.size="+bitmap.getByteCount());
-                        Matrix matrix=new Matrix();
+                        Log.d(TAG, "onPictureTaken:bitmap.size=" + bitmap.getByteCount());
+                        Matrix matrix = new Matrix();
                         matrix.postScale(-1, 1); // 镜像水平翻转
                         Bitmap convertBmp = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-                        Log.d(TAG, "onPictureTaken:convertBmp.size="+convertBmp.getByteCount());
+                        Log.d(TAG, "onPictureTaken:convertBmp.size=" + convertBmp.getByteCount());
 
-                        ByteArrayOutputStream byteArrayOutputStream=new ByteArrayOutputStream();
-                        convertBmp.compress(Bitmap.CompressFormat.JPEG,80 , byteArrayOutputStream);
-                        data=byteArrayOutputStream.toByteArray();
-                        Log.d(TAG, "onPictureTaken:data.length="+data.length);
+                        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                        convertBmp.compress(Bitmap.CompressFormat.JPEG, 80, byteArrayOutputStream);
+                        data = byteArrayOutputStream.toByteArray();
+                        Log.d(TAG, "onPictureTaken:data.length=" + data.length);
                     }
 
 
@@ -321,15 +325,15 @@ public class CameraManager {
                     } else if (mCaptureCallback != null) {
                         mCaptureCallback.onResult(CaptureCallback.FAILURE, null);
                     }
-                    if(continuePreView){
+                    if (continuePreView) {
                         startPreview();
                     }
-                    capturing=false;
+                    capturing = false;
                 }
             });
         } catch (Exception e) {
             e.printStackTrace();
-            capturing=false;
+            capturing = false;
             if (mCaptureCallback != null) {
                 mCaptureCallback.onResult(CaptureCallback.FAILURE, null);
             }
@@ -427,13 +431,11 @@ public class CameraManager {
         } else {
             mCameraFacing = Camera.CameraInfo.CAMERA_FACING_BACK;
         }
-        try {
-            Log.d(TAG, "changeCamera:mCameraFacing="+mCameraFacing);
-            openCamera(mCameraFacing);
-            startPreview(); //开始预览
-        } catch (CameraError cameraError) {
-            cameraError.printStackTrace();
-        }
+
+        Log.d(TAG, "changeCamera:mCameraFacing=" + mCameraFacing);
+        openCamera(mCameraFacing);
+        startPreview(); //开始预览
+
     }
 
     /**
@@ -454,16 +456,17 @@ public class CameraManager {
 
     /**
      * 注册屏幕旋转监听
+     *
      * @param context
      */
-    private void startOrientationListener(Context context){
-        if(mOrientationEventListener==null){
-            mOrientationEventListener=new OrientationEventListener(context) {
+    private void startOrientationListener(Context context) {
+        if (mOrientationEventListener == null) {
+            mOrientationEventListener = new OrientationEventListener(context) {
                 @Override
                 public void onOrientationChanged(int orientation) {
                     //计算手机当前方向的角度值
                     int phoneDegree = 0;
-                    if (((orientation >= 0) && (orientation <= 45))|| (orientation > 315) &&(orientation<=360)) {
+                    if (((orientation >= 0) && (orientation <= 45)) || (orientation > 315) && (orientation <= 360)) {
                         phoneDegree = 0;
                     } else if ((orientation > 45) && (orientation <= 135)) {
                         phoneDegree = 90;
@@ -473,8 +476,8 @@ public class CameraManager {
                         phoneDegree = 270;
                     }
                     //手机方向改变了计算图片旋转角度
-                    if(mPhoneRotation!=phoneDegree){
-                        mPhoneRotation=phoneDegree;
+                    if (mPhoneRotation != phoneDegree) {
+                        mPhoneRotation = phoneDegree;
                         setPicRotation(mPhoneRotation);
                     }
 
@@ -489,8 +492,8 @@ public class CameraManager {
     /**
      * 销毁屏幕旋转监听
      */
-    private void stopOrientationListener(){
-        if(mOrientationEventListener!=null){
+    private void stopOrientationListener() {
+        if (mOrientationEventListener != null) {
             mOrientationEventListener.disable();
         }
     }
@@ -505,7 +508,7 @@ public class CameraManager {
         WindowManager windowManager = (WindowManager) mSurfaceView.getContext().getSystemService(Context.WINDOW_SERVICE);
         int rotation = windowManager.getDefaultDisplay().getRotation();
         //手机旋转的角度
-       int  windowRotation  = 0;
+        int windowRotation = 0;
         switch (rotation) {
             case Surface.ROTATION_0://竖屏
                 windowRotation = 0;
@@ -526,9 +529,10 @@ public class CameraManager {
 
     /**
      * 设置预览方向
+     *
      * @param rotation
      */
-    private void setPreRotation(int rotation){
+    private void setPreRotation(int rotation) {
         Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
         Camera.getCameraInfo(mCameraId, cameraInfo);
         if (mCameraFacing == Camera.CameraInfo.CAMERA_FACING_BACK) {
@@ -552,21 +556,22 @@ public class CameraManager {
                break;
        }*/
 
-        if(mCamera!=null){
+        if (mCamera != null) {
             mCamera.setDisplayOrientation(preRotation);
-            Log.d(TAG, "setPreRotation:rotation="+rotation);
-            Log.d(TAG, "setPreRotation:设置预览方向:preRotation="+preRotation);
+            Log.d(TAG, "setPreRotation:rotation=" + rotation);
+            Log.d(TAG, "setPreRotation:设置预览方向:preRotation=" + preRotation);
         }
 
     }
 
     /**
      * 设置保存的图片的方向
+     *
      * @param phoneRotation
      */
-    private void setPicRotation(int phoneRotation){
+    private void setPicRotation(int phoneRotation) {
         Camera.Parameters parameters = _getParameters();
-        if(parameters==null)return;
+        if (parameters == null) return;
 
         Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
         Camera.getCameraInfo(mCameraId, cameraInfo);
@@ -584,19 +589,19 @@ public class CameraManager {
     }
 
     private Camera.Size preSize;
+
     /**
      * //配置相机参数
-     *
      */
     private void initParameters() {
         Camera.Parameters parameters = _getParameters();
-        if(parameters==null) return;
+        if (parameters == null) return;
 
         boolean exChangeWH = !isLandscape();
         //设置预览图片的格式
-        if(supportPreviewFormat(mPreviewFormat)){
+        if (supportPreviewFormat(mPreviewFormat)) {
             parameters.setPreviewFormat(mPreviewFormat);
-        }else{
+        } else {
             parameters.setPreviewFormat(ImageFormat.NV21);
         }
 
@@ -630,9 +635,9 @@ public class CameraManager {
 //        String flatten = parameters.flatten();
 //        Log.d(TAG, "initParameters:flatten="+flatten);
 
-        if(mZoomHelper==null){
-            mZoomHelper=ZoomHelper.build(mCamera, parameters);
-        }else{
+        if (mZoomHelper == null) {
+            mZoomHelper = ZoomHelper.build(mCamera, parameters);
+        } else {
             mZoomHelper.setParameters(parameters);
             mZoomHelper.setCamera(mCamera);
         }
@@ -645,16 +650,17 @@ public class CameraManager {
 
     /**
      * 是否支持预览编码
+     *
      * @param previewFormat {@link ImageFormat#JPEG ...}
      * @return
      */
-    private boolean supportPreviewFormat(int previewFormat){
+    private boolean supportPreviewFormat(int previewFormat) {
         Camera.Parameters parameters = _getParameters();
-        if(parameters!=null){
+        if (parameters != null) {
             List<Integer> formats = parameters.getSupportedPreviewFormats();
-            if(formats!=null && formats.size()>0){
-                for(Integer format:formats){
-                    if(format ==previewFormat){
+            if (formats != null && formats.size() > 0) {
+                for (Integer format : formats) {
+                    if (format == previewFormat) {
                         return true;
                     }
                 }
@@ -666,6 +672,7 @@ public class CameraManager {
 
     /**
      * 设置预览图片的格式
+     *
      * @param previewFormat
      * @return
      */
@@ -677,20 +684,22 @@ public class CameraManager {
 
     /**
      * 设置闪光灯模式
+     *
      * @param flashMode
      */
-    public void setFlashMode(String flashMode){
-        mFlashModel=flashMode;
+    public void setFlashMode(String flashMode) {
+        mFlashModel = flashMode;
         _setFlashMode(mFlashModel);
     }
 
     /**
      * 设置闪光灯模式
+     *
      * @param flashMode
      */
-    private void _setFlashMode(String flashMode){
+    private void _setFlashMode(String flashMode) {
         Camera.Parameters parameters = _getParameters();
-        if(parameters!=null && mCamera!=null && supportFlashMode(flashMode)){
+        if (parameters != null && mCamera != null && supportFlashMode(flashMode)) {
             parameters.setFlashMode(flashMode);
             mCamera.setParameters(parameters);
         }
@@ -698,14 +707,15 @@ public class CameraManager {
 
     /**
      * 是否支持指定的闪光灯模式
+     *
      * @param flashMode
      * @return
      */
-    private boolean supportFlashMode(String flashMode){
+    private boolean supportFlashMode(String flashMode) {
         Camera.Parameters parameters = _getParameters();
-        if(parameters!=null){
+        if (parameters != null) {
             List<String> supportedFlashModes = parameters.getSupportedFlashModes();
-            if(supportedFlashModes==null){
+            if (supportedFlashModes == null) {
                 return false;
             }
             return supportedFlashModes.contains(flashMode);
@@ -714,21 +724,18 @@ public class CameraManager {
     }
 
 
-
-
-
     /**
      * 获取Camera.Parameters 要使用Camera.Parameters请务必用此方法获取
+     *
      * @return Camera.Parameters
      */
-    private Camera.Parameters _getParameters(){
-        if(mParameters==null && mCamera!=null){
-            mParameters=mCamera.getParameters();
+    private Camera.Parameters _getParameters() {
+        if (mParameters == null && mCamera != null) {
+            mParameters = mCamera.getParameters();
         }
 
         return mParameters;
     }
-
 
 
     /**
@@ -739,11 +746,11 @@ public class CameraManager {
      */
     private boolean supportFocus(String focusMode) {
         Camera.Parameters parameters = _getParameters();
-        if(parameters==null){
+        if (parameters == null) {
             return false;
         }
         List<String> supportedFocusModes = parameters.getSupportedFocusModes();
-        if(supportedFocusModes==null){
+        if (supportedFocusModes == null) {
             return false;
         }
         return supportedFocusModes.contains(focusMode);
@@ -751,6 +758,7 @@ public class CameraManager {
 
     /**
      * 设置预览窗口
+     *
      * @param surfaceView
      * @return
      */
@@ -761,6 +769,7 @@ public class CameraManager {
 
     /**
      * 设置预览回掉
+     *
      * @param previewCallback
      * @return
      */
@@ -771,13 +780,14 @@ public class CameraManager {
 
     /**
      * 设置预览尺寸
+     *
      * @param preWidth
      * @param preHeight
      * @return
      */
     public CameraManager setPreSize(int preWidth, int preHeight) {
-        Log.d(TAG, "setPreSize:preWidth="+preWidth+",preHeight="+preHeight);
-        if(preWidth>0 && preHeight>0 ){
+        Log.d(TAG, "setPreSize:preWidth=" + preWidth + ",preHeight=" + preHeight);
+        if (preWidth > 0 && preHeight > 0) {
             this.preWidth = preWidth;
             this.preHeight = preHeight;
         }
@@ -787,13 +797,14 @@ public class CameraManager {
 
     /**
      * 设置图片尺寸
+     *
      * @param picWidth
      * @param picHeight
      * @return
      */
     public CameraManager setPicSize(int picWidth, int picHeight) {
-        Log.d(TAG, "setPicSize:picWidth="+picWidth+",picHeight="+picHeight);
-        if(picWidth>0 && picHeight>0 ){
+        Log.d(TAG, "setPicSize:picWidth=" + picWidth + ",picHeight=" + picHeight);
+        if (picWidth > 0 && picHeight > 0) {
             this.picWidth = picWidth;
             this.picHeight = picHeight;
         }
@@ -803,6 +814,7 @@ public class CameraManager {
 
     /**
      * 设置使用哪个摄像头
+     *
      * @param cameraFacing {@link Camera.CameraInfo#CAMERA_FACING_BACK,Camera.CameraInfo#CAMERA_FACING_FRONT}
      * @return
      */
@@ -813,6 +825,7 @@ public class CameraManager {
 
     /**
      * 获取当前摄像头的方向
+     *
      * @return
      */
     public int getCameraFacing() {
@@ -821,6 +834,7 @@ public class CameraManager {
 
     /**
      * 设置拍照回掉
+     *
      * @param captureCallback
      */
     public CameraManager setCaptureCallback(CaptureCallback captureCallback) {
@@ -828,12 +842,13 @@ public class CameraManager {
         return this;
     }
 
-    public ZoomHelper getZoomHelper(){
+    public ZoomHelper getZoomHelper() {
         return mZoomHelper;
     }
 
     /**
      * 拍照后是否继续预览
+     *
      * @return
      */
     public boolean isContinuePreView() {
@@ -842,6 +857,7 @@ public class CameraManager {
 
     /**
      * 设置拍照后是否继续预览
+     *
      * @param continuePreView
      */
     public CameraManager setContinuePreView(boolean continuePreView) {
@@ -859,6 +875,7 @@ public class CameraManager {
 
     /**
      * 自拍镜像 默认true
+     *
      * @param mirror
      * @return
      */
@@ -873,5 +890,10 @@ public class CameraManager {
 
     public int getPreRotation() {
         return preRotation;
+    }
+
+    public CameraManager setCameraEventCallback(CameraEventCallback cameraEventCallback) {
+        this.cameraEventCallback = cameraEventCallback;
+        return this;
     }
 }

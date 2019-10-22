@@ -14,15 +14,12 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import com.heking.android.zcamera.CameraEventCallback;
 import com.heking.android.zcamera.camera.CameraManager;
 import com.heking.android.zcamera.camera.ui.CaptureImageActivity;
 import com.heking.android.zcamera.camera.ui.CaptureVideoActivity;
-import com.heking.android.zcamera.exceptions.CameraError;
-import com.zhoug.android.common.utils.AppUtils;
 
 import java.io.File;
-import java.util.Timer;
-import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
@@ -70,15 +67,15 @@ public class MainActivity extends AppCompatActivity {
 
         });
 
-        findViewById(R.id.btn2).setOnClickListener(v->{
-            Intent intent=new Intent(this,BackFrontActivity.class);
+        findViewById(R.id.btn2).setOnClickListener(v -> {
+            Intent intent = new Intent(this, BackFrontActivity.class);
             startActivity(intent);
 
         });
 
 
-        findViewById(R.id.btn3).setOnClickListener(v->{
-            Intent intent=new Intent(this,CaptureVideoActivity.class);
+        findViewById(R.id.btn3).setOnClickListener(v -> {
+            Intent intent = new Intent(this, CaptureVideoActivity.class);
             startActivity(intent);
 
         });
@@ -89,26 +86,40 @@ public class MainActivity extends AppCompatActivity {
         cameraManager1.setSurfaceView(surfaceView1);
         cameraManager1.setPreviewFormat(ImageFormat.JPEG);
         cameraManager1.setCameraFacing(Camera.CameraInfo.CAMERA_FACING_BACK);
-        try {
-            cameraManager1.init();
-        } catch (CameraError cameraError) {
-            cameraError.printStackTrace();
-        }
+        cameraManager1.setCameraEventCallback(new CameraEventCallback() {
+            @Override
+            public void onOpenCameraError(int errorCode, String msg) {
+                Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onOpenCameraSuccess(android.graphics.Camera camera) {
+
+            }
+        });
+
+        cameraManager1.init();
+
         Log.d(TAG, "run:打开第二个相机");
         Toast.makeText(this, "打开第二个相机", Toast.LENGTH_SHORT).show();
         cameraManager2 = new CameraManager();
         cameraManager2.setSurfaceView(surfaceView2);
         cameraManager2.setPreviewFormat(ImageFormat.JPEG);
         cameraManager2.setCameraFacing(Camera.CameraInfo.CAMERA_FACING_FRONT);
-        try {
-            cameraManager2.init();
-            surfaceView2.setVisibility(View.VISIBLE);
-        } catch (Exception cameraError) {
-            cameraError.printStackTrace();
-            Toast.makeText(this, "打开相机失败:"+cameraError.getMessage(), Toast.LENGTH_SHORT).show();
-        }
+        cameraManager2.setCameraEventCallback(new CameraEventCallback() {
+            @Override
+            public void onOpenCameraError(int errorCode, String msg) {
+                Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
+            }
 
+            @Override
+            public void onOpenCameraSuccess(android.graphics.Camera camera) {
 
+            }
+        });
+
+        cameraManager2.init();
+        surfaceView2.setVisibility(View.VISIBLE);
 
 
     }

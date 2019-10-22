@@ -5,8 +5,8 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.hardware.Camera;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
@@ -15,11 +15,11 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.heking.android.zcamera.CameraEventCallback;
 import com.heking.android.zcamera.R;
 import com.heking.android.zcamera.camera.CameraManager;
 import com.heking.android.zcamera.camera.CaptureCallback;
 import com.heking.android.zcamera.camera.Utils.SpUtil;
-import com.heking.android.zcamera.exceptions.CameraError;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -165,7 +165,7 @@ public class CaptureImageActivity extends AppCompatActivity implements View.OnCl
                         flashList.clear();
                         Camera.Parameters parameters = camera.getParameters();
                         List<String> supportedFlashModes = parameters.getSupportedFlashModes();
-                        if(supportedFlashModes==null){
+                        if (supportedFlashModes == null) {
                             return;
                         }
                         if (supportedFlashModes.contains(Camera.Parameters.FLASH_MODE_AUTO)) {
@@ -194,12 +194,19 @@ public class CaptureImageActivity extends AppCompatActivity implements View.OnCl
                 }
             });
         }
+        mCameraManager.setCameraEventCallback(new CameraEventCallback() {
+            @Override
+            public void onOpenCameraError(int errorCode, String msg) {
+                Toast.makeText(CaptureImageActivity.this, msg, Toast.LENGTH_SHORT).show();
+            }
 
-        try {
-            mCameraManager.init();
-        } catch (CameraError cameraError) {
-            cameraError.printStackTrace();
-        }
+            @Override
+            public void onOpenCameraSuccess(android.graphics.Camera camera) {
+
+            }
+        });
+        mCameraManager.init();
+
     }
 
 
@@ -216,8 +223,8 @@ public class CaptureImageActivity extends AppCompatActivity implements View.OnCl
             mCameraManager.setFlashMode(mFlashMode);
             setTvFlash();
             SpUtil.keepFlashMode(this, mFlashMode);
-            Log.d(TAG, "setFlashMode:"+mFlashMode);
-        }else{
+            Log.d(TAG, "setFlashMode:" + mFlashMode);
+        } else {
             toast("没有支持的模式");
         }
     }
@@ -314,7 +321,7 @@ public class CaptureImageActivity extends AppCompatActivity implements View.OnCl
             if (mCameraManager != null) {
                 mCameraManager.changeCamera();
                 flashList.clear();
-                initFlashList=false;
+                initFlashList = false;
                 mCameraFacing = mCameraManager.getCameraFacing();
                 SpUtil.keepCameraFacing(this, mCameraFacing);
             }
